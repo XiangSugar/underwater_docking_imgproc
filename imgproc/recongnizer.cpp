@@ -154,23 +154,24 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 		pos[i] = -20000;
 
 	cv::Mat pSrcImg = image;
+	cv::Mat pSrcImg_ = pSrcImg.clone();
 	cv::Size imgSize = cv::Size(pSrcImg.cols, pSrcImg.rows);	//(宽， 高)
 
 	//去畸变
 	cv::Mat mapx = cv::Mat(imgSize, CV_32FC1);
 	cv::Mat mapy = cv::Mat(imgSize, CV_32FC1);
 	cv::Mat R = cv::Mat::eye(3, 3, CV_32F);
-	//该方式将保持原图大小不变（不被裁剪），但是会留下黑边
-	initUndistortRectifyMap(cameraMat, distCoeffs, R,
-		getOptimalNewCameraMatrix(cameraMat, distCoeffs, imgSize, 1),
-		imgSize, CV_32FC1, mapx, mapy);
-	cv::remap(pSrcImg, pSrcImg, mapx, mapy, cv::INTER_LINEAR);
+	cv::Mat newCamMat = cv::getOptimalNewCameraMatrix(cameraMat, distCoeffs, imgSize, 1);
+	initUndistortRectifyMap(cameraMat, distCoeffs, R, newCamMat, imgSize, CV_32FC1, mapx, mapy);
+	cv::remap(pSrcImg_, pSrcImg, mapx, mapy, cv::INTER_LINEAR);
 
-	//cv::undistort(pSrcImg, pSrcImg, cameraMat, distCoeffs);
+	//cv::undistort(pSrcImg_, pSrcImg, cameraMat, distCoeffs, getOptimalNewCameraMatrix(cameraMat, distCoeffs, imgSize, 1));
+	cv::imshow("undist", pSrcImg);
 	int contours_size = 0;
 	
 	//缩小图像，降低时耗
 	cv::resize(pSrcImg, pSrcImg, cv::Size(800, 450));
+	imgSize = cv::Size(pSrcImg.cols, pSrcImg.rows);	//(宽， 高)
 
 	cv::Mat imgGray(imgSize, CV_8UC1);
 	cv::Mat imgBlur;
@@ -358,8 +359,8 @@ Preprocessing::Preprocessing()	//默认构造函数
 	cameraMat = cv::Mat(3, 3, CV_64FC1, camera);
 	distCoeffs = cv::Mat(5, 1, CV_64FC1, distCo);
 	numLights = 6;
-	binThrehold = 180;
-	printMode = PRTTP_ERRONLY;
+	binThrehold = 245;
+	printMode = PRTTP_ANSONLY;
 	dockingCenter = cv::Point(0.0, 0.0);
 	horizontalFOV = 2.094395;				//rad （120°）
 	verticalFOV = 1.22173;					//rad （70°）

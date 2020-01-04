@@ -60,6 +60,7 @@ int main(int argc, char** argv)
 
 	while (1)
 	{
+		/*
 		for (int i = 0; i < 3; i++)//一次循环抓3帧，最后一帧留作处理
 		{
 			//if (pSrcImg = cvLoadImage("point0.jpg"))
@@ -67,8 +68,8 @@ int main(int argc, char** argv)
 			{
 				//cv::Mat Img(pSrcImg);	//图像格式转换	浅拷贝
 				//此处可取原始视频
-				cvNamedWindow("Video", CV_WINDOW_AUTOSIZE);
-				cvShowImage("Video", pSrcImg);
+				//cvNamedWindow("Video", CV_WINDOW_AUTOSIZE);
+				//cvShowImage("Video", pSrcImg);
 			}
 			else
 			{
@@ -78,8 +79,20 @@ int main(int argc, char** argv)
 				return 0;
 			}
 		}
+		*/
+		pSrcImg = cvQueryFrame(capture);
+		if (!pSrcImg)
+		{
+			cvReleaseCapture(&capture);
+			std::cout << "no image stream!\n";
+			std::system("pause");//程序暂停，看运行结果
+			return 0;
+		}
+
 		double ans[5];
 		cv::Mat Img(pSrcImg);
+		cv::imshow("Video", Img);
+		
 		cout << "---------------------------------" << endl;
 		preproc->process(Img, ans, ansType);
 		
