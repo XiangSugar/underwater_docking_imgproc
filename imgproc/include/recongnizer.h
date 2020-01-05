@@ -1,13 +1,17 @@
 #pragma once
 
 
-#include <cv.h>
-#include <highgui.h>
+//#include <cv.h>
+//#include <opencv2/core/core.hpp>
+//#include <highgui.h>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <ctime>
 #include <vector>
-#include <algorithm>
+//#include <algorithm>
 
 #define ANSTYPE_ALL 0
 #define ANSTYPE_POS 1

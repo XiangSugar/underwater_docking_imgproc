@@ -1,9 +1,4 @@
-﻿#include <cmath>
-#include <opencv2/opencv.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include "recongnizer.h"
-
+﻿#include "../include/recongnizer.h"
 
 void ansToChar(double * in, char * out)
 {
@@ -166,7 +161,11 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 	cv::remap(pSrcImg_, pSrcImg, mapx, mapy, cv::INTER_LINEAR);
 
 	//cv::undistort(pSrcImg_, pSrcImg, cameraMat, distCoeffs, getOptimalNewCameraMatrix(cameraMat, distCoeffs, imgSize, 1));
-	cv::imshow("undist", pSrcImg);
+	if (printMode <= PRTTP_TESTMOD)
+	{
+		cv::namedWindow("Gray", CV_WINDOW_AUTOSIZE);
+		cv::imshow("undist", pSrcImg);
+	}
 	int contours_size = 0;
 	
 	//缩小图像，降低时耗
@@ -208,7 +207,7 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 		ansType = ANSTYPE_NON;
 		return;
 	}
-	if (printMode <= PRTTP_TESTMOD)
+	if (printMode <= PRTTP_ERRONLY)
 	{
 		cout << "contour_size = " << contours_size << endl;
 	}
@@ -291,7 +290,7 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 
 			//调用PoseEstimation类计算相对位姿
 			PoseEstimation pnpsolver;
-			//设置相机参数
+			//设置相机内部参
 			pnpsolver.SetCameraMatrix(752.316145729373490, 771.167006926629140, 634.524795343358850, 328.191773442282910);
 			//设置畸变系数
 			pnpsolver.SetDistortionCoefficients(-0.341704164412008, 0.125056005119510, 0.000581877489323, -0.000029980361742, 0.000000000000000);
@@ -360,7 +359,7 @@ Preprocessing::Preprocessing()	//默认构造函数
 	distCoeffs = cv::Mat(5, 1, CV_64FC1, distCo);
 	numLights = 6;
 	binThrehold = 245;
-	printMode = PRTTP_ANSONLY;
+	printMode = PRTTP_TESTMOD;
 	dockingCenter = cv::Point(0.0, 0.0);
 	horizontalFOV = 2.094395;				//rad （120°）
 	verticalFOV = 1.22173;					//rad （70°）

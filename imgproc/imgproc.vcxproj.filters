@@ -15,24 +15,24 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="targetver.h">
+    <ClInclude Include="include\recongnizer.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
+    <ClInclude Include="include\stdafx.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="recongnizer.h">
+    <ClInclude Include="include\targetver.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="recongnizer.cpp">
+    <ClCompile Include="src\recongnizer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="stdafx.cpp">
+    <ClCompile Include="src\stdafx.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="targetRec.cpp">
+    <ClCompile Include="src\targetRec.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

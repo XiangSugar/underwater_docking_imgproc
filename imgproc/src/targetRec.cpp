@@ -1,14 +1,9 @@
 
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
-#include <cv.h>
-#include <highgui.h>
+//#include <opencv2/core/types_c.h>
 #include <iostream>
-#include <math.h>
-#include <time.h>
-#include <vector>
-#include <algorithm>
-#include "recongnizer.h"
+#include "../include/recongnizer.h"
 #include <WINSOCK2.H>   
 #include <stdio.h> 
 #include <fstream>
@@ -25,9 +20,9 @@
 int main(int argc, char** argv)
 {
 	using namespace std;
-	ofstream fout1("calculation_result.txt");
+	ofstream fout1("../result/calculation_result.txt");
 	fout1 << "x " << "y " << "z " << "d" << endl;
-	ofstream fout2("simple_culculation.txt");
+	ofstream fout2("../resuslt/simple_culculation.txt");
 	fout2 << "hor_angle " << "ver_angle " << endl;
 	WSADATA wsaData;
 	SOCKET sClient;
