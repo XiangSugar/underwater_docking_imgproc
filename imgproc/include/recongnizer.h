@@ -1,9 +1,5 @@
 #pragma once
 
-
-//#include <cv.h>
-//#include <opencv2/core/core.hpp>
-//#include <highgui.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -11,7 +7,6 @@
 #include <cmath>
 #include <ctime>
 #include <vector>
-//#include <algorithm>
 
 #define ANSTYPE_ALL 0
 #define ANSTYPE_POS 1
@@ -25,19 +20,16 @@
 #define PRTTP_ERRONLY 2
 #define PRTTP_NOTHING 3
 
-//double camera[9] = { 0, 0, 0,
-//					 0, 0, 0,
-//					 0, 0, 0 };
-//double distCo[5] = { 0, 0, 0, 0, 0 };
 
 //世界坐标系中的光斑三维坐标
-const cv::vector<cv::Point3d> WorldPoints = { cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0),
-											  cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0),
-											  cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0) };
-
+//TO DO
+static const cv::vector<cv::Point3d> WorldPoints = 
+	{ cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0),
+	  cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0),
+	  cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0) 
+	};
 
 using namespace std;
-//using namespace cv;
 
 class Preprocessing
 {
@@ -47,15 +39,15 @@ private:
 	int printMode;						//打印模式，方便调试
 	float horizontalFOV;
 	float verticalFOV;
-	int estimateMode;					//
+	int estimateMode;
+	int remap_xy_flag;
 	cv::Mat cameraMat;
 	cv::Mat distCoeffs;
+	cv::Mat mapx;
+	cv::Mat mapy;
 	cv::Point2d dockingCenter;
-	cv::vector<cv::Point> targetPoints; //
+	cv::vector<cv::Point> targetPoints;
 
-	//--------------
-	float sizeThrehold;
-	//-----------
 private:
 	/***************计算最佳阈值****************/
 	int Otsu(cv::Mat &image);
@@ -66,16 +58,21 @@ private:
 	/************在黑色背景上画出经过选择的目标光斑及其中心点************/
 	void drawDetConts(cv::Mat & img, cv::vector<cv::vector<cv::Point>> contours, cv::vector<cv::Point2d> Centers, int contourSize);
 
-	/**************给出 docking 中心相对于摄像头的两个方位信息*************/
+	/* @brief 给出 docking 中心相对于摄像头的两个方位信息
+	*/
 	void get_Angles(cv::Size imageSize, double ans[]);
 public:
 	
-	//得到匹配后的点对
+	/* @breif 得到匹配后的点对
+	*  @param lightCenters  待匹配的光斑坐标
+	*  @param matchPoints   根据几何关系,按照规定的标号顺序匹配排列好之后的光斑坐标
+	*/
 	void get_targetPoints(cv::vector<cv::Point2d> lightCenters, cv::vector<cv::Point2d> & matchPoints);
 	
-	/********************************设置位姿解算的模式************************************/
-	//**	输入 ESTIMATE_MODE_SIMPLE  代表使用简单的解算方式，只能给出两个方位角信息		**
-	//**	输入 ESTIMATE_MODE_COMPLEX 代表使用复杂的解算方式，可以给出	六个位姿信息			**
+	/* @breif 设置位姿解算的模式
+	*  @param estimate_mode: ESTIMATE_MODE_SIMPLE  代表使用简单的解算方式，只能给出两个方位角信息
+	*                        ESTIMATE_MODE_COMPLEX 代表使用复杂的解算方式，可以给出六个位姿信息
+	*/
 	void set_estimateMode(int estimate_mode);
 
 	//***************************************图像分析函数*****************************************
@@ -121,19 +118,21 @@ public:
 	//**  输入PRTTP_NOTHING代表不显示信息模式，高速运行。                                       **
 	//********************************************************************************************
 	void setPrintMode(int modeI);
-	
-	
-	
-	//*********************************构造函数***************************************************
-	//**  此类的构造函数。有一些参数可以选择，使用默认值可以进行测试。                          **
-	//**  verticalFOVIn代表了摄像头的竖直视场角（弧度）。                                       **
-	//**  horiziontalFOVIn代表了摄像头的水平视场角(弧度)。                                      **
-	//**  binTreholdIn代表了二值化时的阈值，用于滤出图像中的亮点光斑(0-255)。                   **
-	//**  sizeThreholdIn代表了对于光斑大小的限制，小于这个值直径的亮点不算光斑。(像素单位)      **
-	//**  prtTypeI代表了运行模式，含义同setMode()函数。                                         **
-	//********************************************************************************************
-	Preprocessing();	//默认构造函数
 
+	//设置相机内参数矩阵
+	void SetCameraMatrix(double fx, double fy, double u0, double v0);
+
+	//设置畸变系数矩阵
+	void SetDistortionCoefficients(double k_1, double  k_2, double  p_1, double  p_2, double k_3);
+
+	//矫正畸变时获取 x, y 的映射关系
+	void get_new_mapxy(cv::Size imageSize);
+	
+	//默认构造函数
+	Preprocessing();
+
+	//带参数初始化
+	Preprocessing(double fx, double fy, double u0, double v0, double k_1, double  k_2, double  p_1, double  p_2, double k_3);
 
 	~Preprocessing();
 };

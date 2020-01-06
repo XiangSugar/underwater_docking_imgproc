@@ -20,12 +20,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\recongnizer.h" />
-    <ClInclude Include="include\stdafx.h" />
-    <ClInclude Include="include\targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\recongnizer.cpp" />
-    <ClCompile Include="src\stdafx.cpp" />
     <ClCompile Include="src\targetRec.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -16,14 +16,13 @@
 #define MSGSIZE        1024         //收发缓冲区的大小      
 #pragma comment(lib, "ws2_32.lib")      
 
-
 int main(int argc, char** argv)
 {
-	using namespace std;
-	ofstream fout1("../result/calculation_result.txt");
-	fout1 << "x " << "y " << "z " << "d" << endl;
-	ofstream fout2("../resuslt/simple_culculation.txt");
-	fout2 << "hor_angle " << "ver_angle " << endl;
+	//using namespace std;
+	std::ofstream fout1("../result/calculation_result.txt");
+	fout1 << "x " << "y " << "z " << "d" << std::endl;
+	std::ofstream fout2("../resuslt/simple_culculation.txt");
+	fout2 << "hor_angle " << "ver_angle " << std::endl;
 	WSADATA wsaData;
 	SOCKET sClient;
 	SOCKADDR_IN server;
@@ -46,12 +45,14 @@ int main(int argc, char** argv)
 	if (capture == 0)
 	{
 		cvReleaseCapture(&capture);
-		std::cout << "获取视频流错误" << endl;
+		std::cout << "获取视频流错误" << std::endl;
 		return 0;
 	}
 	Preprocessing * preproc = new Preprocessing();
+	preproc->SetCameraMatrix(752.316145729373490, 771.167006926629140, 634.524795343358850, 328.191773442282910);
+	preproc->SetDistortionCoefficients(-0.341704164412008, 0.125056005119510, 0.000581877489323, -0.000029980361742, 0.00000000000000);
 	//设置显示信息的模式
-	preproc->setPrintMode(PRTTP_ERRONLY);
+	preproc->setPrintMode(PRTTP_ANSONLY);
 
 	while (1)
 	{
@@ -62,8 +63,6 @@ int main(int argc, char** argv)
 			if (pSrcImg = cvQueryFrame(capture))
 			{
 				//cv::Mat Img(pSrcImg);	//图像格式转换	浅拷贝
-				//此处可取原始视频
-				//cvNamedWindow("Video", CV_WINDOW_AUTOSIZE);
 				//cvShowImage("Video", pSrcImg);
 			}
 			else
@@ -88,38 +87,38 @@ int main(int argc, char** argv)
 		cv::Mat Img(pSrcImg);
 		cv::imshow("Video", Img);
 		
-		cout << "---------------------------------" << endl;
+		std::cout << "---------------------------------" << std::endl;
 		preproc->process(Img, ans, ansType);
 		
 		if (ansType == ANSTYPE_NON)
-			cout << "NO SOLUTION!" << endl;
+			std::cout << "NO SOLUTION!" << std::endl;
 		else if (ansType == ANSTYPE_POS)
 		{
-			cout << "POSITION ONLY!" << endl;
-			cout << "horiziontal angle:" << ans[1] << endl;
-			cout << "vertical    angle:" << ans[2] << endl;
-			fout2 << ans[1] << " " << ans[2] << endl;
+			std::cout << "POSITION ONLY!" << std::endl;
+			std::cout << "horiziontal angle:" << ans[1] << std::endl;
+			std::cout << "vertical    angle:" << ans[2] << std::endl;
+			fout2 << ans[1] << " " << ans[2] << std::endl;
 		}
 		else
 		{
-			cout << "ALL SOLUTION GET!" << endl;
-			cout << "x		 :" << ans[1] << endl;
-			cout << "y		 :" << ans[2] << endl;
-			cout << "z		 :" << ans[3] << endl;
-			cout << "distance:" << ans[4] << endl;
+			std::cout << "ALL SOLUTION GET!" << std::endl;
+			std::cout << "x		 :" << ans[1] << std::endl;
+			std::cout << "y		 :" << ans[2] << std::endl;
+			std::cout << "z		 :" << ans[3] << std::endl;
+			std::cout << "distance:" << ans[4] << std::endl;
 			fout1 << ans[1] << " " << ans[2] << " " 
-				  << ans[3] << " " << ans[4] << endl;
+				  << ans[3] << " " << ans[4] << std::endl;
 		}
 
 		// 发送数据      
 		ansToChar(ans, szMessage);
 		send(sClient, szMessage, 20, 0);
-		cout << "OK!" << endl;
+		std::cout << "OK!" << std::endl;
 		cvWaitKey(5);
 	}
 	cvReleaseCapture(&capture);
-	cout << "no image stream!\n";
-	system("pause");
+	std::cout << "no image stream!\n";
+	std::system("pause");
 	return 0;
 }
 

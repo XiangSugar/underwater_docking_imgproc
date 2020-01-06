@@ -27,7 +27,6 @@ int Preprocessing::Otsu(cv::Mat &image)
 {
 	// To do
 	return 0;
-
 }
 
 void Preprocessing::drawDetConts(cv::Mat & img, cv::vector<cv::vector<cv::Point>> contours, cv::vector<cv::Point2d> Centers, int contoursSize)
@@ -42,6 +41,15 @@ void Preprocessing::drawDetConts(cv::Mat & img, cv::vector<cv::vector<cv::Point>
 		//绘制光斑重心点
 		cv::circle(img, Centers[contoursSize - i - 1], 2, cv::Scalar(0, 0, 255), -1, 8);
 	}
+}
+
+void Preprocessing::get_new_mapxy(cv::Size imgSize)
+{
+	mapx = cv::Mat(imgSize, CV_64FC1);
+	mapy = cv::Mat(imgSize, CV_64FC1);
+	cv::Mat R = cv::Mat::eye(3, 3, CV_64F);
+	cv::Mat newCamMat = cv::getOptimalNewCameraMatrix(cameraMat, distCoeffs, imgSize, 1);
+	cv::initUndistortRectifyMap(cameraMat, distCoeffs, R, newCamMat, imgSize, CV_32FC1, mapx, mapy);
 }
 
 void Preprocessing::get_dockingCenter(cv::vector<cv::Point2d> Centers, int contoursSize)
@@ -153,17 +161,16 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 	cv::Size imgSize = cv::Size(pSrcImg.cols, pSrcImg.rows);	//(宽， 高)
 
 	//去畸变
-	cv::Mat mapx = cv::Mat(imgSize, CV_32FC1);
-	cv::Mat mapy = cv::Mat(imgSize, CV_32FC1);
-	cv::Mat R = cv::Mat::eye(3, 3, CV_32F);
-	cv::Mat newCamMat = cv::getOptimalNewCameraMatrix(cameraMat, distCoeffs, imgSize, 1);
-	initUndistortRectifyMap(cameraMat, distCoeffs, R, newCamMat, imgSize, CV_32FC1, mapx, mapy);
+	if (remap_xy_flag == 1)
+	{
+		get_new_mapxy(imgSize);
+		remap_xy_flag = 0;
+	}
 	cv::remap(pSrcImg_, pSrcImg, mapx, mapy, cv::INTER_LINEAR);
 
-	//cv::undistort(pSrcImg_, pSrcImg, cameraMat, distCoeffs, getOptimalNewCameraMatrix(cameraMat, distCoeffs, imgSize, 1));
 	if (printMode <= PRTTP_TESTMOD)
 	{
-		cv::namedWindow("Gray", CV_WINDOW_AUTOSIZE);
+		cv::namedWindow("undist", CV_WINDOW_AUTOSIZE);
 		cv::imshow("undist", pSrcImg);
 	}
 	int contours_size = 0;
@@ -171,26 +178,34 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 	//缩小图像，降低时耗
 	cv::resize(pSrcImg, pSrcImg, cv::Size(800, 450));
 	imgSize = cv::Size(pSrcImg.cols, pSrcImg.rows);	//(宽， 高)
+	if (printMode <= PRTTP_TESTMOD)
+	{
+		cv::namedWindow("resize", CV_WINDOW_AUTOSIZE);
+		cv::imshow("resize", pSrcImg);
+	}
 
-	cv::Mat imgGray(imgSize, CV_8UC1);
-	cv::Mat imgBlur;
-	cv::Mat imgBin(imgSize, CV_8UC1);
+	//TO DO
+	/*
+		imgGray imgBlur imgBin 无法正常显示，有待解决
+	*/
+	cv::Mat imgGray;// = cv::Mat::zeros(imgSize, CV_8UC1);
+	cv::Mat imgBlur;// = cv::Mat::zeros(imgSize, CV_8UC1);
+	cv::Mat imgBin;// = cv::Mat::zeros(imgSize, CV_8UC1);
 	cv::Mat imgBinDet = cv::Mat::zeros(imgSize, CV_8UC1);
 
 	cv::cvtColor(pSrcImg, imgGray, CV_BGR2GRAY);
-	if (printMode <= PRTTP_TESTMOD)
-	{
-		cv::namedWindow("Gray", CV_WINDOW_AUTOSIZE);
-		cv::imshow("Gray", imgGray);
-	}
+	//cv::namedWindow("Gray", CV_WINDOW_AUTOSIZE);
+	//cv::imshow("Gray", imgGray);
 	cv::GaussianBlur(imgGray, imgBlur, cv::Size(7, 7), 3);
+	//cv::namedWindow("Blur", CV_WINDOW_AUTOSIZE);
+	//cv::imshow("Blur", imgBlur);
 	
 	//binThrehold = Otsu(out) + 60;
 	cout << "binThrehold = " << binThrehold << endl;
 	cv::threshold(imgBlur, imgBin, binThrehold, 255, cv::THRESH_BINARY);
 	cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5), cv::Point(-1, -1));
 	cv::morphologyEx(imgBin, imgBin, cv::MORPH_CLOSE, kernel, cv::Point(-1, -1), 1);
-	if (printMode <= PRTTP_TESTMOD)
+	if (printMode == PRTTP_TESTMOD)
 	{
 		cv::namedWindow("bin", CV_WINDOW_AUTOSIZE);
 		cv::imshow("bin", imgBin);
@@ -198,19 +213,28 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 
 	vector<vector<cv::Point>> contours;
 	cv::findContours(imgBin, contours, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-	cv::drawContours(pSrcImg, contours, -1, 0, 2);
 	contours_size = contours.size();
+	if (printMode <= PRTTP_ERRONLY)
+	{
+		cout << "contour_size = " << contours_size << endl;
+	}
+
 	if (contours_size == 0)
 	{
 		std::cout << "No lights detected!" << endl;
 		pos[0] = 1;
 		ansType = ANSTYPE_NON;
+		clock_t end_time = clock();
+		if (printMode <= PRTTP_ERRONLY)
+			std::cout << "time cost:" << (end_time - start_time) << endl;
+		if (printMode < PRTTP_NOTHING)
+			cv::imshow("Process Result", pSrcImg);
+
 		return;
 	}
-	if (printMode <= PRTTP_ERRONLY)
-	{
-		cout << "contour_size = " << contours_size << endl;
-	}
+	else
+		cv::drawContours(pSrcImg, contours, -1, 0, 2);
+
 	//-----------------------计算光斑重心----------------------------
 	cv::Moments moment;
 	cv::vector<cv::Point2d> Center;
@@ -265,9 +289,6 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 		get_dockingCenter(Center, contours_size);
 		cv::circle(pSrcImg, dockingCenter, 2, cv::Scalar(0,255,0), -1, 8);
 
-		/*if (contours_size < numLights)
-			estimateMode = ESTIMATE_MODE_SIMPLE;*/
-
 		if (estimateMode == ESTIMATE_MODE_SIMPLE)
 		{
 			get_Angles(imgSize, pos);
@@ -290,13 +311,9 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 
 			//调用PoseEstimation类计算相对位姿
 			PoseEstimation pnpsolver;
-			//设置相机内部参
 			pnpsolver.SetCameraMatrix(752.316145729373490, 771.167006926629140, 634.524795343358850, 328.191773442282910);
-			//设置畸变系数
 			pnpsolver.SetDistortionCoefficients(-0.341704164412008, 0.125056005119510, 0.000581877489323, -0.000029980361742, 0.000000000000000);
-			//给出3D点
 			pnpsolver.set_3DPoints(WorldPoints);
-			//给出对应的2D点
 			pnpsolver.set_2DPoints(PointsCam);
 
 			if (pnpsolver.poseEsti(PoseEstimation::METHOD::CV_EPNP) == 0)
@@ -323,7 +340,7 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 		{
 			drawDetConts(imgBinDet, contours, Center, contours_size);
 			cv::namedWindow("binDet", CV_WINDOW_AUTOSIZE);
-			cv::imshow("binDet", imgBin);
+			cv::imshow("binDet", imgBinDet);
 		}
 		get_dockingCenter(Center, contours_size);
 		cv::circle(pSrcImg, dockingCenter, 2, cv::Scalar(0, 255, 0), -1, 8);
@@ -339,43 +356,69 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 	clock_t end_time = clock();
 	if (printMode <= PRTTP_ERRONLY)
 		std::cout << "time cost:" << (end_time - start_time) << endl;
-
 	if (printMode < PRTTP_NOTHING)
-	{
 		cv::imshow("Process Result", pSrcImg);
-	}
 
 	return;
 }
 
+void Preprocessing::SetCameraMatrix(double fx, double fy, double u0, double v0)
+{
+	cameraMat = cv::Mat(3, 3, CV_64FC1, cv::Scalar::all(0));
+	cameraMat.ptr<double>(0)[0] = fx;
+	cameraMat.ptr<double>(0)[2] = u0;
+	cameraMat.ptr<double>(1)[1] = fy;
+	cameraMat.ptr<double>(1)[2] = v0;
+	cameraMat.ptr<double>(2)[2] = 1.0f;
+}
+
+void Preprocessing::SetDistortionCoefficients(double k_1, double  k_2, double  p_1, double  p_2, double k_3)
+{
+	distCoeffs = cv::Mat(5, 1, CV_64FC1, cv::Scalar::all(0));
+	distCoeffs.ptr<double>(0)[0] = k_1;
+	distCoeffs.ptr<double>(1)[0] = k_2;
+	distCoeffs.ptr<double>(2)[0] = p_1;
+	distCoeffs.ptr<double>(3)[0] = p_2;
+	distCoeffs.ptr<double>(4)[0] = k_3;
+}
+
 Preprocessing::Preprocessing()	//默认构造函数
 {
-	double camera[9] = { 752.316145729373490, 0, 634.524795343358850,
-						 0, 771.167006926629140, 328.191773442282910,
-					 	 0, 0, 1.0 };
-	double distCo[5] = { -0.341704164412008, 0.125056005119510, 0.000581877489323, -0.000029980361742, 0.000000000000000 };
-	
-	cameraMat = cv::Mat(3, 3, CV_64FC1, camera);
-	distCoeffs = cv::Mat(5, 1, CV_64FC1, distCo);
-	numLights = 6;
-	binThrehold = 245;
-	printMode = PRTTP_TESTMOD;
+	numLights     = 6;
+	binThrehold   = 245;
+	printMode     = PRTTP_TESTMOD;
 	dockingCenter = cv::Point(0.0, 0.0);
 	horizontalFOV = 2.094395;				//rad （120°）
-	verticalFOV = 1.22173;					//rad （70°）
-	estimateMode = ESTIMATE_MODE_COMPLEX;
+	verticalFOV   = 1.22173;					//rad （70°）
+	estimateMode  = ESTIMATE_MODE_COMPLEX;
+	remap_xy_flag = 1;
 
 	//to do 是否删除
 	if (printMode < PRTTP_NOTHING)
-	{
 		cvNamedWindow("Process Result", CV_WINDOW_AUTOSIZE);
-	}
+}
+
+Preprocessing::Preprocessing(double fx, double fy, double u0, double v0,
+	double k_1, double  k_2, double  p_1, double  p_2, double k_3)
+{
+	numLights     = 6;
+	binThrehold   = 245;
+	printMode     = PRTTP_TESTMOD;
+	dockingCenter = cv::Point(0.0, 0.0);
+	horizontalFOV = 2.094395;				    //rad （120°）
+	verticalFOV   = 1.22173;					//rad （70°）
+	estimateMode  = ESTIMATE_MODE_COMPLEX;
+	remap_xy_flag = 1;
+	SetCameraMatrix(fx, fy, u0, v0);
+	SetDistortionCoefficients(k_1, k_2, p_1, p_2, k_3);
+
+	if (printMode < PRTTP_NOTHING)
+		cvNamedWindow("Process Result", CV_WINDOW_AUTOSIZE);
 }
 
 Preprocessing::~Preprocessing()
 {
 }
-
 
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -582,21 +625,6 @@ PoseEstimation::PoseEstimation(double fx, double fy, double u0, double v0,
 	SetCameraMatrix(fx, fy, u0, v0);
 	SetDistortionCoefficients(k_1, k_2, p_1, p_2, k_3);
 }
-
-//PoseEstimation::PoseEstimation()
-//{
-//	double camera[9] = { 0, 0, 0,
-//						 0, 0, 0,
-//						 0, 0, 0 };
-//	double distCo[5] = { 0, 0, 0, 0, 0 };
-//	cv::vector<cv::Point3d> realPos = { cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0),
-//										cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0),
-//										cv::Point3d(0, 0, 0) };
-//	Points3D = realPos;
-//	camera_matrix = cv::Mat(3, 3, CV_64FC1, camera);
-//	distortion_coefficients = cv::Mat(5, 1, CV_64FC1, distCo);
-//
-//}
 
 PoseEstimation::~PoseEstimation()
 {
