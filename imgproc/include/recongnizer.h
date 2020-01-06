@@ -21,7 +21,7 @@
 #define PRTTP_NOTHING 3
 
 
-//世界坐标系中的光斑三维坐标
+//3D coordinates of the light spots in the world
 //TO DO
 static const cv::vector<cv::Point3d> WorldPoints = 
 	{ cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0),
@@ -34,9 +34,9 @@ using namespace std;
 class Preprocessing
 {
 private:
-	int binThrehold;					//阈值参数
-	int numLights;						//安装的灯的个数
-	int printMode;						//打印模式，方便调试
+	int binThrehold;
+	int numLights;
+	int printMode;
 	float horizontalFOV;
 	float verticalFOV;
 	int estimateMode;
@@ -49,13 +49,16 @@ private:
 	cv::vector<cv::Point> targetPoints;
 
 private:
-	/***************计算最佳阈值****************/
+	/* @ breif 计算最佳阈值
+	*/
 	int Otsu(cv::Mat &image);
 
-	/***************在图像坐标系中计算 docking 的中心位置坐标**************/
+	/* @breif 在图像坐标系中计算 docking 的中心位置坐标
+	*/
 	void get_dockingCenter(cv::vector<cv::Point2d> Centers, int contoursSize);
 
-	/************在黑色背景上画出经过选择的目标光斑及其中心点************/
+	/* @breif 在黑色背景上画出经过选择的目标光斑及其中心点
+	*/
 	void drawDetConts(cv::Mat & img, cv::vector<cv::vector<cv::Point>> contours, cv::vector<cv::Point2d> Centers, int contourSize);
 
 	/* @brief 给出 docking 中心相对于摄像头的两个方位信息
