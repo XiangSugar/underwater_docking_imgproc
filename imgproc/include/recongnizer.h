@@ -23,10 +23,10 @@
 
 //3D coordinates of the light spots in the world
 //TO DO
-static const cv::vector<cv::Point3d> WorldPoints = 
-	{ cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0),
-	  cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0),
-	  cv::Point3d(0, 0, 0), cv::Point3d(0, 0, 0) 
+const cv::vector<cv::Point3d> WorldPoints = 
+	{ cv::Point3d(0, 0, 220), cv::Point3d(0, -255, 110),
+	  cv::Point3d(0, 255, 110), cv::Point3d(0, -255, -110),
+	  cv::Point3d(0, 255, -110), cv::Point3d(0, 0, 0) 
 	};
 
 using namespace std;
@@ -123,7 +123,7 @@ public:
 	void setPrintMode(int modeI);
 
 	//设置相机内参数矩阵
-	void SetCameraMatrix(double fx, double fy, double u0, double v0);
+	void SetCameraMatrix(double fx, double fy, double u0, double v0, double s);
 
 	//设置畸变系数矩阵
 	void SetDistortionCoefficients(double k_1, double  k_2, double  p_1, double  p_2, double k_3);
@@ -135,7 +135,8 @@ public:
 	Preprocessing();
 
 	//带参数初始化
-	Preprocessing(double fx, double fy, double u0, double v0, double k_1, double  k_2, double  p_1, double  p_2, double k_3);
+	Preprocessing(double fx, double fy, double u0, double v0, double s,
+		double k_1, double  k_2, double  p_1, double  p_2, double k_3);
 
 	~Preprocessing();
 };
@@ -223,17 +224,19 @@ public:
 	//void poseEsti(cv::vector<cv::Point> targetPoints, double ans[]);
 
 	//设置相机内参数矩阵
-	void SetCameraMatrix(double fx, double fy, double u0, double v0);
+	void SetCameraMatrix(double fx, double fy, double u0, double v0, double s);
 
 	//设置畸变系数矩阵
 	void SetDistortionCoefficients(double k_1, double  k_2, double  p_1, double  p_2, double k_3);
+	void SetDistortionCoefficients();
 
 	void set_3DPoints(cv::vector<cv::Point3d> worldPoints);
 	void set_2DPoints(cv::vector<cv::Point2d> PointCam);
 
 	PoseEstimation();
 	//带参数初始化
-	PoseEstimation(double fx, double fy, double u0, double v0, double k_1, double  k_2, double  p_1, double  p_2, double k_3);
+	PoseEstimation(double fx, double fy, double u0, double v0, double s,
+		double k_1, double  k_2, double  p_1, double  p_2, double k_3);
 	~PoseEstimation();
 };
 

@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 		return 0;
 	}
 	Preprocessing * preproc = new Preprocessing();
-	preproc->SetCameraMatrix(752.316145729373490, 771.167006926629140, 634.524795343358850, 328.191773442282910);
+	preproc->SetCameraMatrix(752.316145729373490, 771.167006926629140, 634.524795343358850, 328.191773442282910, 1.0);
 	preproc->SetDistortionCoefficients(-0.341704164412008, 0.125056005119510, 0.000581877489323, -0.000029980361742, 0.00000000000000);
 	preproc->setPrintMode(PRTTP_ERRONLY);
 

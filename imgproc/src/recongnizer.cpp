@@ -150,6 +150,7 @@ void Preprocessing::get_targetPoints(cv::vector<cv::Point2d> lightCenters, cv::v
 	}
 }
 
+
 void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 {
 	clock_t start_time = clock();
@@ -160,7 +161,10 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 	cv::Mat pSrcImg_ = pSrcImg.clone();
 	cv::Size imgSize = cv::Size(pSrcImg.cols, pSrcImg.rows);	//(宽， 高)
 
-	//去畸变
+	//去畸变 
+	//精确位姿解算时，不需要先进行去畸变处理
+	//此处去畸变有利于简单模式的方位角解算
+	//但是经过去畸变处理之后，后面的精确解算模式中需要做相应处理
 	if (remap_xy_flag == 1)
 	{
 		get_new_mapxy(imgSize);
@@ -276,6 +280,12 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 		}
 	}
 
+	/*printf("Center:\n");
+	for (int i = 0; i < 6; i++)
+	{
+		printf("%4f, %4f\n", Center[i].x, Center[i].y);
+	}*/
+
 	//根据光斑检测情况确定解算逻辑
 	if (numLights <= contours_size)
 	{
@@ -304,17 +314,42 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 			//把 center 中的后六个点取出来
 			for (int i = 0; i < numLights; i++)
 			{
-				lightCenters.push_back(Center[contours_size - numLights + i]);
+				lightCenters[i] = (Center[contours_size - numLights + i]);
 			}
+
+			printf("lightCenters:\n");
+			for (int i = 0; i < 6; i++)
+			{
+				printf("%4f,   %4f\n", lightCenters[i].x, lightCenters[i].y);
+			}
+
 			// 通过比较得出各个光源的正确的位置，做到一一对应
 			get_targetPoints(lightCenters, PointsCam);
 
+			printf("PointsCam:\n");
+			for (int i = 0; i < 6; i++)
+			{
+				printf("%4f,   %4f\n", PointsCam[i].x, PointsCam[i].y);
+			}
+
 			//调用PoseEstimation类计算相对位姿
 			PoseEstimation pnpsolver;
-			pnpsolver.SetCameraMatrix(752.316145729373490, 771.167006926629140, 634.524795343358850, 328.191773442282910);
-			pnpsolver.SetDistortionCoefficients(-0.341704164412008, 0.125056005119510, 0.000581877489323, -0.000029980361742, 0.000000000000000);
+			pnpsolver.SetCameraMatrix(752.316145729373490, 771.167006926629140, 634.524795343358850, 328.191773442282910, 0.625);
+			//pnpsolver.SetDistortionCoefficients(-0.341704164412008, 0.125056005119510, 0.000581877489323, -0.000029980361742, 0.000000000000000);
+			//已经去畸变，所以此处的畸变参数置零
+			pnpsolver.SetDistortionCoefficients();
+			extern const cv::vector<cv::Point3d>WorldPoints;
 			pnpsolver.set_3DPoints(WorldPoints);
+			/*for (int i = 0; i < 6; i++)
+			{
+				printf("%4f, %4f, %4f\n", pnpsolver.Points3D[i].x, pnpsolver.Points3D[i].y, pnpsolver.Points3D[i].z);
+			}*/
+			
 			pnpsolver.set_2DPoints(PointsCam);
+			/*for (int i = 0; i < 6; i++)
+			{
+				printf("%4f, %4f\n", pnpsolver.Points2D[i].x, pnpsolver.Points2D[i].y);	
+			}*/
 
 			if (pnpsolver.poseEsti(PoseEstimation::METHOD::CV_EPNP) == 0)
 			{
@@ -362,13 +397,14 @@ void Preprocessing::process(cv::Mat image, double pos[], int & ansType)
 	return;
 }
 
-void Preprocessing::SetCameraMatrix(double fx, double fy, double u0, double v0)
+// s 为缩放系数
+void Preprocessing::SetCameraMatrix(double fx, double fy, double u0, double v0, double s)
 {
 	cameraMat = cv::Mat(3, 3, CV_64FC1, cv::Scalar::all(0));
-	cameraMat.ptr<double>(0)[0] = fx;
-	cameraMat.ptr<double>(0)[2] = u0;
-	cameraMat.ptr<double>(1)[1] = fy;
-	cameraMat.ptr<double>(1)[2] = v0;
+	cameraMat.ptr<double>(0)[0] = fx * s;
+	cameraMat.ptr<double>(0)[2] = u0 * s;
+	cameraMat.ptr<double>(1)[1] = fy * s;
+	cameraMat.ptr<double>(1)[2] = v0 * s;
 	cameraMat.ptr<double>(2)[2] = 1.0f;
 }
 
@@ -398,7 +434,7 @@ Preprocessing::Preprocessing()	//默认构造函数
 		cvNamedWindow("Process Result", CV_WINDOW_AUTOSIZE);
 }
 
-Preprocessing::Preprocessing(double fx, double fy, double u0, double v0,
+Preprocessing::Preprocessing(double fx, double fy, double u0, double v0, double s,
 	double k_1, double  k_2, double  p_1, double  p_2, double k_3)
 {
 	numLights     = 6;
@@ -409,7 +445,7 @@ Preprocessing::Preprocessing(double fx, double fy, double u0, double v0,
 	verticalFOV   = 1.22173;					//rad （70°）
 	estimateMode  = ESTIMATE_MODE_COMPLEX;
 	remap_xy_flag = 1;
-	SetCameraMatrix(fx, fy, u0, v0);
+	SetCameraMatrix(fx, fy, u0, v0, s);
 	SetDistortionCoefficients(k_1, k_2, p_1, p_2, k_3);
 
 	if (printMode < PRTTP_NOTHING)
@@ -473,13 +509,14 @@ void PoseEstimation::set_2DPoints(cv::vector<cv::Point2d> PointCam)
 		Points2D.push_back(PointCam[i]);
 }
 
-void PoseEstimation::SetCameraMatrix(double fx, double fy, double u0, double v0)
+void PoseEstimation::SetCameraMatrix(double fx, double fy, double u0, double v0, double s)
 {
+	// s 为缩放系数
 	camera_matrix = cv::Mat(3, 3, CV_64FC1, cv::Scalar::all(0));
-	camera_matrix.ptr<double>(0)[0] = fx;
-	camera_matrix.ptr<double>(0)[2] = u0;
-	camera_matrix.ptr<double>(1)[1] = fy;
-	camera_matrix.ptr<double>(1)[2] = v0;
+	camera_matrix.ptr<double>(0)[0] = fx * s;
+	camera_matrix.ptr<double>(0)[2] = u0 * s;
+	camera_matrix.ptr<double>(1)[1] = fy * s;
+	camera_matrix.ptr<double>(1)[2] = v0 * s;
 	camera_matrix.ptr<double>(2)[2] = 1.0f;
 }
 
@@ -491,6 +528,11 @@ void PoseEstimation::SetDistortionCoefficients(double k_1, double  k_2, double  
 	distortion_coefficients.ptr<double>(2)[0] = p_1;
 	distortion_coefficients.ptr<double>(3)[0] = p_2;
 	distortion_coefficients.ptr<double>(4)[0] = k_3;
+}
+
+void PoseEstimation::SetDistortionCoefficients()
+{
+	distortion_coefficients = cv::Mat(5, 1, CV_64FC1, cv::Scalar::all(0));
 }
 
 int PoseEstimation::poseEsti(METHOD method = METHOD::CV_EPNP)
@@ -616,13 +658,13 @@ PoseEstimation::PoseEstimation()
 	cv::Mat rvec(rv), tvec(tv);
 }
 
-PoseEstimation::PoseEstimation(double fx, double fy, double u0, double v0,
+PoseEstimation::PoseEstimation(double fx, double fy, double u0, double v0, double s,
 							   double k_1, double  k_2, double  p_1, double  p_2, double k_3)
 {
 	//初始化输出矩阵
 	vector<double> rv(3), tv(3);
 	cv::Mat rvec(rv), tvec(tv);
-	SetCameraMatrix(fx, fy, u0, v0);
+	SetCameraMatrix(fx, fy, u0, v0, s);
 	SetDistortionCoefficients(k_1, k_2, p_1, p_2, k_3);
 }
 
